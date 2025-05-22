@@ -1,133 +1,127 @@
-#include <iostream>
-#include <vector>
-#include <cstdlib>
-#include <ctime>
-#inlcude "model.h"
+#include "model.h"
+#include <sstream>
 
-using namespace std;
-
-class Point
+Game::Game() : window(sf::VideoMode(WIDTH, HEIGHT), "Snake"), currentDelay(baseDelay)
 {
-public:
-    int x, y;
+    window.setFramerateLimit(60);
+}
 
-    Point(int x = 0, int y = 0) : x(x), y(y) {}
-
-    bool operator == (const Point &p) const
-    {
-        return x == p.x && y == p.y;
-    }
-};
-
-class Snake
+void Game::processInput()
 {
-private:
-    vector<Point> body;
-    char direction;
-
-public:
-    Snake(int startX, int startY)
+    sf::Event event;
+    while (window.pollEvent(event))
     {
-        body.push_back(Point(startX, startY));
-        direction = 'R';
-    }
+        if (event.type == sf::Event::Closed) { window.close(); }
 
-    void changeDirection(char newDirection)
-    {
-        if ((direction == 'L' && newDirection != 'R') ||
-            (direction == 'R' && newDirection != 'L') ||
-            (direction == 'U' && newDirection != 'D') ||
-            (direction == 'D' && newDirection != 'U'))
+        if (event.type == sf::Event::KeyPressed)
         {
-            direction = newDirection;
-        }
-    }
-
-    void move()
-    {
-        Point newHead = body[0];
-
-        switch (direction)
-        {
-            case 'L': newHead.x--; break;
-            case 'R': newHead.x++; break;
-            case 'U': newHead.y--; break;
-            case 'D': newHead.y++; break;
-        }
-
-        body.insert(body.begin(), newHead);
-        body.pop_back();
-    }
-
-    void grow()
-    {
-        body.push_back(body.back());
-    }
-
-    const vector<Point>& getBody() const
-    {
-        return body;
-    }
-
-    Point getHead() const
-    {
-        return body[0];
-    }
-
-
-};
-
-class Game
-{
-    private:
-        const int width, height;
-        Snake snake;
-        Point food;
-        bool gameOver;
-
-        void generateFood()
-        {
-            srand(time(nullptr));
-            food.x = rand() % width;
-            food.y = rand() % height;
-        }
-
-    public:
-        void input()
-        {
-            if(khbit()){
-                char key = getch();
-                switch(key)
-                {
-                    case 'w': snake.changeDirection('U'); break;
-                    case 's': snake.changeDirection('D'); break;
-                    case 'a': snake.changeDirection('L'); break;
-                    case 'd': snake.changeDirection('R'); break;
-                }
-            }
-        }
-
-        void logic()
-        {
-            snake.move();
-            Point head = snake.getHead();
-
-            if (head.x < 0 || head.x >= width || head.y < 0 || head.y >= height) { gameOver = true; }
-
-            for (int i = 1; i < snake.getBody().size(); ++i)
+            switch(event.key.code)
             {
-                if (head == snake.getBody()[i]) { gameOver = true; }
-            }
+                case sf::Keyboard::Up:
+                    if (snake.direction != Direction::Down)
+                        snake.direction = Direction::Up;
+                    break;
 
-            if (head == food)
-            {
-                snake.grow();
-                generateFood();
+                case sf::Keyboard::Down:
+                    if (snake.direction != Direction::Up)
+                        snake.direction = Direction::Down;
+                    break;
+
+                case sf::Keyboard::Left:
+                    if (snake.direction != Direction::Right)
+                        snake.direction = Direction::Left;
+                    break;
+
+                case sf::Keyboard::Right:
+                    if (snake.direction != Direction::Left)
+                        snake.direction = Direction::Right;
+                    break;
             }
         }
+    }
+}
 
-        bool isGameOver() const { return gameOver; }
-};
+void Game::update()
+{
+    snake.move();
 
+    if (snake.segments[0].x == food.x && snake.segments[0].y == food.y)
+    {
+        if (food.type == FoodType::Normal)
+        {
+            snake.grow();
+            score += 10;
+            currentDelay = std::max(0.05f, currentDelay * 0.95f);
+        }
+        food.respawn();
+        return;
+    }
 
+    if (snake.checkCollision()) { window.close(); }
+}
 
+void Game::drawScore()
+{
+    sf::Font font;
+    if (!font.loadFromFile("arial.ttf"))
+    {
+        sf::Text text;
+        text.setString("Score: " + std::to_string(score));
+        text.setCharacterSize(24);
+        text.setFillColor(sf::Color::White);
+        text.setPosition(10, 10);
+        window.draw(text);
+        return;
+    }
+
+    sf::Text text;
+    text.setFont(font);
+    text.setString("Score: " + std::to_string(score));
+    text.setCharacterSize(24);
+    text.setFillColor(sf::Color::White);
+    text.setPosition(10, 10);
+    window.draw(text);
+}
+
+void Game::render()
+{
+    window.clear(sf::Color::Black);
+
+    sf::RectangleShape foodShape(sf::Vector2f(GRID_SIZE, GRID_SIZE));
+    foodShape.setFillColor(sf::Color::Red);
+    foodShape.setPosition(food.x * GRID_SIZE, food.y * GRID_SIZE);
+    window.draw(foodShape);
+
+    for (const auto& segment : snake.segments)
+    {
+        sf::RectangleShape segmentShape(sf::Vector2f(GRID_SIZE, GRID_SIZE));
+        segmentShape.setFillColor(sf::Color::Green);
+        segmentShape.setPosition(segment.x * GRID_SIZE, segment.y * GRID_SIZE);
+        window.draw(segmentShape);
+    }
+
+    drawScore();
+    window.display();
+}
+
+void Game::run()
+{
+    sf::Clock clock;
+    float timer = 0;
+
+    while (window.isOpen())
+    {
+        float time = clock.restart().asSeconds();
+        timer += time;
+
+        processInput();
+
+        if (timer > currentDelay)
+        {
+            timer = 0;
+            update();
+        }
+
+        render();
+    }
+}
