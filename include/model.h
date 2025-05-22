@@ -1,33 +1,29 @@
-class Point
-{
-    public:
-        int x,y;
-        bool operator;
-};
+#include <SFML/Graphics.hpp>
+#include "snake.h"
+#include "parts.h"
+#include "dir.h"
 
-class Snake
-{
-    private:
-        vector<Point> body;
-        char direction = 0;
-    public:
-        void changeDirection();
-        void move();
-        void grow();
-};
+const int WIDTH = 800;
+const int HEIGHT = 600;
+const int GRID_SIZE = 20;
+const int GRID_WIDTH = 40;
+const int GRID_HEIGHT = 30;
 
 class Game
 {
-    private:
-        const int width, height;
-        Snake snake;
-        Point food;
-        bool gameOver;
-        void generateFood();
+    sf::RenderWindow window;
+    Snake snake;
+    Food food;
+    float baseDelay = 0.1f;
+    float currentDelay;
+    int score = 0;
+    void processInput();
+    void update();
+    void render();
+    void drawScore();
 
-    public:
-        void input();
-        void logic();
-
+public:
+    Game();
+    void run();
 };
 
