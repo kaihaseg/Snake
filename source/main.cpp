@@ -1,9 +1,10 @@
-#inlcude <iostream>
+#include "model.h"
 
-using namespace std;
-
-int main(int ac, const char* a[])
+int main()
 {
+    Game game;
+    game.run();
 
     return 0;
 }
+
